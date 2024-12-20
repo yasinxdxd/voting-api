@@ -50,7 +50,7 @@ router.post('/signin', async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).send({message: `error at response body: ${error}`, data: req.body})
+        return res.status(500).send({message: `error at response body: ${error}`, data: req.body})
     }
 })
 
