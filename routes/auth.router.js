@@ -65,15 +65,16 @@ router.post('/signup', async (req, res) => {
         }
 
         // check for tc_no to be unique
-        const user = await db.any(`
+        const user = await db.oneOrNone(`
             SELECT *
             FROM users u
             WHERE
             u.tc_no = $1;
         `, [bd.tc_no]);
         
+        console.log(user)
         if (user !== null) {
-            res.status(400).send({message: "TC No is already taken!", data: req.body});
+            return res.status(400).send({message: "TC No is already taken!", data: req.body});
         }
 
         bcrypt.hash(bd.password, saltRounds, async function(err, hash) {
@@ -83,10 +84,10 @@ router.post('/signup', async (req, res) => {
             `, [bd.tc_no, bd.first_name, bd.last_name, hash, bd.birthdate, bd.gender]);
 
             // req.session.user = {...body};
-            res.status(201).send({message: "success, user is created!"});
+            return res.status(201).send({message: "success, user is created!"});
         });
     } catch (error) {
-        res.status(500).send({message: `error at response body: ${error}`, data: req.body})
+        return res.status(500).send({message: `error at response body: ${error}`, data: req.body})
     }
 })
 
