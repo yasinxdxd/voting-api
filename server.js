@@ -6,6 +6,7 @@ require('dotenv').config()
 const { db } = require('./db/connection.db');
 
 const app = express()
+app.set('trust proxy', true);
 
 const API_KEY = process.env.VOTE_APP_API_KEY;
 
@@ -14,7 +15,7 @@ app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json())
 // Configure the session middleware
 app.use(session({
-  secret: 'session-secret-key', // replace with a strong, secure secret
+  secret: process.env.SESSION_SECRET, // replace with a strong, secure secret
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false } // set secure to true if your application is served over HTTPS
@@ -51,5 +52,11 @@ app.use("/auth", authRouter)
 
 const profileRouter = require("./routes/profile.router")
 app.use("/profile", profileRouter)
+
+const adminRouter = require("./routes/admin.router")
+app.use("/admin", adminRouter)
+
+const voteRouter = require("./routes/vote.router")
+app.use("/vote", voteRouter)
 
 app.listen(5000)
