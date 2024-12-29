@@ -15,44 +15,50 @@ const { db } = require("../db/connection.db")
 
 
 router.post('/signin', async (req, res) => {
-    const tc_no = req.body.tc_no;
-    const password = req.body.password;
-    let hash = await db.oneOrNone(`
-        SELECT u.password
-        FROM users u
-        WHERE
-        u.tc_no = $1;
-    `, [tc_no]);
-    
-    if (!hash) {
-        return res.status(401).json({ message: 'Invalid TC No!' });
-    }
-
-    hash = hash.password;
+    const { tc_no, password } = req.body;
 
     try {
-        bcrypt.compare(password, hash, async function(err, result) {
-            if (result == true) {
-                let user = await db.one(`
-                    SELECT *
-                    FROM users u
-                    WHERE
-                    u.tc_no = $1 AND u.password = $2;
-                `, [tc_no, hash]);
+        // Fetch the hashed password from the database
+        const hashResult = await db.oneOrNone(
+            `SELECT u.password FROM users u WHERE u.tc_no = $1;`,
+            [tc_no]
+        );
 
-                req.session.user = user;
-                console.log(req.session.user)
-                res.status(200).send({message: "authentication is successful!", data: {tc_no, hash}});
-            } else {
-                console.error(err);
-                return res.status(401).json({ message: 'Invalid password' });
-            }
+        if (!hashResult) {
+            return res.status(401).json({ message: 'Invalid TC No!' });
+        }
+
+        const hash = hashResult.password;
+
+        // Compare the provided password with the stored hash
+        const isMatch = await bcrypt.compare(password, hash);
+
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid password' });
+        }
+
+        // Fetch the user's full data from the database
+        const user = await db.one(
+            `SELECT * FROM users u WHERE u.tc_no = $1;`,
+            [tc_no]
+        );
+
+        // Set user session
+        req.session.user = user;
+        console.log(req.session.user);
+
+        return res.status(200).send({
+            message: "Authentication is successful!",
+            data: { tc_no, hash }
         });
-
     } catch (error) {
-        return res.status(500).send({message: `error at response body: ${error}`, data: req.body})
+        console.error(error);
+        return res.status(500).send({
+            message: `Error during sign-in: ${error.message}`,
+            data: req.body
+        });
     }
-})
+});
 
 router.post('/signup', async (req, res) => {
     try {
