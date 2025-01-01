@@ -49,7 +49,7 @@ router.post('/signin', async (req, res) => {
 
         return res.status(200).send({
             message: "Authentication is successful!",
-            data: { tc_no, hash }
+            data: req.session.user
         });
     } catch (error) {
         console.error(error);
@@ -97,7 +97,7 @@ router.post('/signup', async (req, res) => {
     }
 })
 
-router.post('/logout', (req, res) => {
+router.get('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             console.error(err);
