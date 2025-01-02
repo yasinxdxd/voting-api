@@ -22,6 +22,22 @@ router.get('/', (req, res) => {
     }
 });
 
+router.get('/user', async (req, res) => {
+    const user = req.session.user;
+    if (user) {
+        const record = await db.oneOrNone(`
+            SELECT *
+            FROM users u
+            WHERE u.tc_no = $1
+            `,
+            [user.tc_no]
+        );
+        res.status(200).send({message: "sessioned user is found!", record});
+    } else {
+        res.status(404).send({message: "sessioned user is not found!", user});
+    }
+});
+
 
 const setRouter = express.Router();
 
