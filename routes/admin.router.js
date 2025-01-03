@@ -12,6 +12,15 @@ router.use(bodyParser.json());
 // Database connection
 const { db } = require("../db/connection.db");
 
+router.get('/validate', async (req, res) => {
+    const admin = req.session.admin;
+    if (admin) {
+        res.status(200).send({message: "sessioned admin is found!", admin});
+    } else {
+        res.status(404).send({message: "sessioned admin is not found!", admin});
+    }
+});
+
 // Admin Sign-In Route
 router.post('/signin', async (req, res) => {
     const { username, password } = req.body;

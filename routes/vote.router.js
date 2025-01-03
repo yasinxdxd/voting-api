@@ -197,5 +197,54 @@ router.get('/results/:electionId', async (req, res) => {
     }
 });
 
+router.get('/AllVotes', async (req, res) => {
+    try {
+        const elections = await db.query(`
+            SELECT 
+                e.id AS election_id,
+                e.title AS election_name,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'candidate_id', candidates_data.candidate_id,
+                            'candidate_name', candidates_data.candidate_name,
+                            'votes', COALESCE(candidates_data.vote_count, 0)
+                        )
+                    ) FILTER (WHERE candidates_data.candidate_id IS NOT NULL),
+                    '[]'
+                ) AS candidates
+            FROM 
+                election e
+            LEFT JOIN (
+                SELECT 
+                    c.id AS candidate_id,
+                    c.election_id,
+                    c.name AS candidate_name,
+                    COUNT(v.id) AS vote_count
+                FROM 
+                    candidates c
+                LEFT JOIN 
+                    votes v 
+                ON 
+                    c.id = v.candidate_id
+                GROUP BY 
+                    c.id, c.election_id, c.name
+            ) candidates_data
+            ON 
+                e.id = candidates_data.election_id
+            GROUP BY 
+                e.id, e.title
+            ORDER BY 
+                e.id
+        `);
+
+        res.status(200).send({ message: "Elections with vote counts fetched successfully", elections: elections });
+    } catch (error) {
+        res.status(500).send({ message: "Error fetching elections", error });
+    }
+});
+
+
+
 
 module.exports = router;
