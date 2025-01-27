@@ -89,9 +89,20 @@ router.post('/signup', async (req, res) => {
                 VALUES ($1, $2, $3, $4, $5, $6);
             `, [bd.tc_no, bd.first_name, bd.last_name, hash, bd.birthdate, bd.gender]);
 
-            // req.session.user = {...body};
+
+            const createdUser = await db.oneOrNone(`
+                SELECT *
+                FROM users u
+                WHERE
+                u.tc_no = $1;
+            `, [bd.tc_no]);
+    
+            req.session.user = createdUser;
+            console.log(req.session.user);
+
             return res.status(201).send({message: "success, user is created!"});
         });
+
     } catch (error) {
         return res.status(500).send({message: `error at response body: ${error}`, data: req.body})
     }

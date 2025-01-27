@@ -32,6 +32,36 @@ router.get('/user', async (req, res) => {
             `,
             [user.tc_no]
         );
+        const residence = await db.oneOrNone(`
+            SELECT *
+            FROM residences r
+            WHERE r.user_id = $1
+            `,
+            [user.id]
+        );
+
+        if (residence != null) {
+            const city = await db.oneOrNone(`
+                SELECT title
+                FROM cities c
+                WHERE c.id = $1
+                `,
+                [residence.city_id]
+            );
+            const county = await db.oneOrNone(`
+                SELECT title
+                FROM counties c
+                WHERE c.id = $1
+                `,
+                [residence.county_id]
+            );
+            record.residence = residence;
+            record.residence.city = city.title;
+            record.residence.county = county.title;
+        } else {
+            record.residence = residence;
+        }
+        
         res.status(200).send({message: "sessioned user is found!", record});
     } else {
         res.status(404).send({message: "sessioned user is not found!", user});
@@ -166,12 +196,15 @@ setRouter.post('/last_name', async (req, res) => {
 
 
 setRouter.post('/all', async (req, res) => {
-    const { 
+    const {
         previous_password, 
         new_password, 
         new_password_again, 
-        new_first_name, 
-        new_last_name 
+        first_name,
+        last_name,
+        birthdate,
+        gender,
+        residence
     } = req.body;
 
     const user = req.session.user;
@@ -217,15 +250,45 @@ setRouter.post('/all', async (req, res) => {
         }
 
         // Handle first name update
-        if (new_first_name) {
-            updates.first_name = new_first_name;
-            user.first_name = new_first_name; // Optionally update the session
+        if (first_name) {
+            updates.first_name = first_name;
+            user.first_name = first_name; // Optionally update the session
         }
 
         // Handle last name update
-        if (new_last_name) {
-            updates.last_name = new_last_name;
-            user.last_name = new_last_name; // Optionally update the session
+        if (last_name) {
+            updates.last_name = last_name;
+            user.last_name = last_name; // Optionally update the session
+        }
+
+        if (gender) {
+            updates.gender = gender;
+            user.gender = gender; // Optionally update the session
+        }
+
+        if (birthdate) {
+            updates.birthdate = birthdate;
+            user.birthdate = birthdate; // Optionally update the session
+        }
+
+        if (residence) {
+            const already_exist = await db.oneOrNone(
+                `SELECT * from residences r WHERE r.user_id = $1`,
+                [user.id]
+            );
+
+            if (already_exist == null) {
+                await db.query(
+                    `INSERT INTO residences VALUES($1, $2, $3, $4)`,
+                    [user.id, residence.city_id, residence.county_id, residence.address]
+                );
+            } else {
+                await db.none(
+                    `UPDATE residences SET city_id = $1, county_id = $2, address = $3 WHERE user_id = $4`,
+                    [residence.city_id, residence.county_id, residence.address, user.id]
+                );
+            }
+
         }
 
         // Update the database with the collected updates
